@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Pyra Mythra Byleth Titsmash</title>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+  background: black;
+}
+
+#container {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  touch-action: none;
+}
+
+#image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  user-select: none;
+  -webkit-user-drag: none;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+#resetZone {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 80px;
+  height: 80px;
+  z-index: 10;
+}
+</style>
+</head>
+
+<body>
+
+<div id="container">
+  <img id="image">
+  <div id="resetZone"></div>
+</div>
+
+<script>
+const img = document.getElementById("image");
+const container = document.getElementById("container");
+const resetZone = document.getElementById("resetZone");
+
+// ---- IMAGENES ----
+const images = [
+  "Pyra Mythra Byleth Titsmash 01.png",
+  "Pyra Mythra Byleth Titsmash 02.png"
+];
+
+let currentImageIndex = 0;
+
+function loadImage(index) {
+  currentImageIndex = index;
+  img.src = images[currentImageIndex];
+}
+
+let offsetX = 0, offsetY = 0;
+let scale = 1;
+
+let isDragging = false;
+let startX, startY;
+
+// TAP DETECTION
+let tapStartX = 0;
+let tapStartY = 0;
+let moved = false;
+const TAP_THRESHOLD = 10; // píxeles máximos de movimiento
+
+// inercia
+let velocityX = 0, velocityY = 0;
+
+// pinch
+let initialDistance = null;
+let initialScale = 1;
+
+// doble tap
+let lastTap = 0;
+
+// ---- UTIL ----
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+// ---- LIMITES ----
+function clamp() {
+  const minX = container.clientWidth - img.clientWidth * scale;
+  const minY = container.clientHeight - img.clientHeight * scale;
+
+  offsetX = Math.min(0, Math.max(minX, offsetX));
+  offsetY = Math.min(0, Math.max(minY, offsetY));
+}
+
+// ---- UPDATE ----
+function updateTransform() {
+  clamp();
+  img.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+}
+
+// ---- AJUSTE ----
+function resizeImage() {
+  const imgRatio = img.naturalWidth / img.naturalHeight;
+  const screenRatio = window.innerWidth / window.innerHeight;
+
+  if (imgRatio > screenRatio) {
+    img.style.height = "100vh";
+    img.style.width = "auto";
+  } else {
+    img.style.width = "100vw";
+    img.style.height = "auto";
+  }
+
+  scale = 1;
+  centerImage(false);
+}
+
+// ---- CENTRAR ----
+function centerImage(animated = true) {
+  const targetX = (container.clientWidth - img.clientWidth * scale) / 2;
+  const targetY = (container.clientHeight - img.clientHeight * scale) / 2;
+
+  if (!animated) {
+    offsetX = targetX;
+    offsetY = targetY;
+    updateTransform();
+    return;
+  }
+
+  animateTo(targetX, targetY, scale);
+}
+
+// ---- ANIMACION ----
+function animateTo(targetX, targetY, targetScale) {
+  let startX = offsetX;
+  let startY = offsetY;
+  let startScale = scale;
+
+  let t = 0;
+
+  function step() {
+    t += 0.08;
+
+    offsetX = lerp(startX, targetX, t);
+    offsetY = lerp(startY, targetY, t);
+    scale = lerp(startScale, targetScale, t);
+
+    updateTransform();
+
+    if (t < 1) requestAnimationFrame(step);
+  }
+
+  requestAnimationFrame(step);
+}
+
+// ---- ZOOM CENTRADO ----
+function zoomAt(pointX, pointY, newScale) {
+  const prevScale = scale;
+
+  const imageX = (pointX - offsetX) / prevScale;
+  const imageY = (pointY - offsetY) / prevScale;
+
+  scale = newScale;
+
+  offsetX = pointX - imageX * scale;
+  offsetY = pointY - imageY * scale;
+
+  updateTransform();
+}
+
+// ---- DRAG ----
+function startDrag(x, y) {
+  isDragging = true;
+  startX = x - offsetX;
+  startY = y - offsetY;
+  velocityX = velocityY = 0;
+}
+
+function moveDrag(x, y) {
+  if (!isDragging) return;
+
+  velocityX = x - (startX + offsetX);
+  velocityY = y - (startY + offsetY);
+
+  offsetX = x - startX;
+  offsetY = y - startY;
+
+  updateTransform();
+}
+
+function endDrag() {
+  isDragging = false;
+  applyInertia();
+}
+
+// ---- INERCIA ----
+function applyInertia() {
+  let friction = 0.90;
+
+  function step() {
+    velocityX *= friction;
+    velocityY *= friction;
+
+    offsetX += velocityX * 0.2;
+    offsetY += velocityY * 0.2;
+
+    clamp();
+    updateTransform();
+
+    if (Math.abs(velocityX) > 0.5 || Math.abs(velocityY) > 0.5) {
+      requestAnimationFrame(step);
+    }
+  }
+
+  requestAnimationFrame(step);
+}
+
+// ---- SCROLL ZOOM ----
+container.addEventListener("wheel", e => {
+  e.preventDefault();
+
+  const zoom = -e.deltaY * 0.001;
+  const newScale = Math.min(4, Math.max(1, scale + zoom));
+
+  zoomAt(e.clientX, e.clientY, newScale);
+});
+
+// ---- TOUCH START ----
+container.addEventListener("touchstart", e => {
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+
+    tapStartX = t.clientX;
+    tapStartY = t.clientY;
+    moved = false;
+
+    startDrag(t.clientX, t.clientY);
+  }
+
+  if (e.touches.length === 2) {
+    initialDistance = getDistance(e.touches[0], e.touches[1]);
+    initialScale = scale;
+  }
+
+  const now = Date.now();
+  if (now - lastTap < 300) {
+    const newScale = scale === 1 ? 2 : 1;
+    zoomAt(e.touches[0].clientX, e.touches[0].clientY, newScale);
+  }
+  lastTap = now;
+});
+
+// ---- TOUCH MOVE ----
+container.addEventListener("touchmove", e => {
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+
+    if (Math.abs(t.clientX - tapStartX) > TAP_THRESHOLD ||
+        Math.abs(t.clientY - tapStartY) > TAP_THRESHOLD) {
+      moved = true;
+    }
+
+    moveDrag(t.clientX, t.clientY);
+  }
+
+  if (e.touches.length === 2) {
+    const newDist = getDistance(e.touches[0], e.touches[1]);
+    let newScale = initialScale * (newDist / initialDistance);
+    newScale = Math.min(4, Math.max(1, newScale));
+
+    const mid = getMidpoint(e.touches[0], e.touches[1]);
+    zoomAt(mid.x, mid.y, newScale);
+  }
+});
+
+// ---- TOUCH END ----
+container.addEventListener("touchend", e => {
+  if (!moved) {
+    handleTap(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+  }
+  endDrag();
+});
+
+// ---- MOUSE ----
+container.addEventListener("mousedown", e => {
+  tapStartX = e.clientX;
+  tapStartY = e.clientY;
+  moved = false;
+  startDrag(e.clientX, e.clientY);
+});
+
+window.addEventListener("mousemove", e => {
+  if (Math.abs(e.clientX - tapStartX) > TAP_THRESHOLD ||
+      Math.abs(e.clientY - tapStartY) > TAP_THRESHOLD) {
+    moved = true;
+  }
+  moveDrag(e.clientX, e.clientY);
+});
+
+window.addEventListener("mouseup", e => {
+  if (!moved) {
+    handleTap(e.clientX, e.clientY);
+  }
+  endDrag();
+});
+
+// ---- TAP INTELIGENTE ----
+function handleTap(clientX, clientY) {
+  const rect = container.getBoundingClientRect();
+  const clickX = clientX - rect.left;
+  const clickY = clientY - rect.top;
+
+  const inRight = clickX > rect.width * 0.85;
+  const inBottom = clickY > rect.height * 0.85;
+
+  if (inRight && inBottom) {
+    currentImageIndex = (currentImageIndex + 1) % images.length;
+    loadImage(currentImageIndex);
+  }
+}
+
+// ---- RESET ----
+resetZone.addEventListener("click", () => {
+  scale = 1;
+  centerImage(true);
+});
+
+// ---- INIT ----
+img.onload = resizeImage;
+window.onresize = resizeImage;
+
+loadImage(0);
+
+// ---- AUX ----
+function getDistance(t1, t2) {
+  return Math.hypot(
+    t1.clientX - t2.clientX,
+    t1.clientY - t2.clientY
+  );
+}
+
+function getMidpoint(t1, t2) {
+  return {
+    x: (t1.clientX + t2.clientX) / 2,
+    y: (t1.clientY + t2.clientY) / 2
+  };
+}
+</script>
+
+</body>
+</html>
