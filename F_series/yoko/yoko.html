@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <title>Yoko</title>
+
+    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            overflow: hidden;
+        }
+
+        #flash-container {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #player-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: 0 0;
+            cursor: grab;
+        }
+
+        ruffle-player {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+        }
+
+        /* CONTROLES */
+        #controls {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            padding: 8px 12px;
+            background: #222;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #zoom-slider {
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="flash-container">
+        <div id="player-wrapper"></div>
+    </div>
+
+    <!-- CONTROLES -->
+    <div id="controls">
+        <button id="back-btn">⬅ Volver</button>
+        <button id="mode-btn">🖐 Modo mover</button>
+        <input type="range" id="zoom-slider" min="1" max="3" step="0.1" value="1">
+    </div>
+
+    <script>
+        window.RufflePlayer = window.RufflePlayer || {};
+
+        let scale = 1;
+        let posX = 0;
+        let posY = 0;
+        let isDragging = false;
+        let startX, startY;
+        let player;
+        let moveMode = true;
+
+        window.addEventListener("DOMContentLoaded", () => {
+            const ruffle = window.RufflePlayer.newest();
+            player = ruffle.createPlayer();
+
+            const wrapper = document.getElementById("player-wrapper");
+            wrapper.appendChild(player);
+
+            player.style.width = "100vw";
+            player.style.height = "100vh";
+
+            player.load("yk001.swf");
+
+            updateTransform();
+            updateMode();
+
+            // ZOOM
+            document.getElementById("zoom-slider").addEventListener("input", (e) => {
+                scale = Math.max(1, parseFloat(e.target.value)); // 👈 mínimo 1
+                updateTransform();
+            });
+
+            // BOTÓN MODO
+            document.getElementById("mode-btn").addEventListener("click", () => {
+                moveMode = !moveMode;
+                updateMode();
+            });
+
+            function updateMode() {
+                const btn = document.getElementById("mode-btn");
+
+                if (moveMode) {
+                    player.style.pointerEvents = "none";
+                    document.getElementById("player-wrapper").style.cursor = "grab";
+                    btn.textContent = "🖐 Modo mover";
+                } else {
+                    player.style.pointerEvents = "auto";
+                    document.getElementById("player-wrapper").style.cursor = "default";
+                    btn.textContent = "🎮 Modo interactuar";
+                }
+            }
+
+            const wrapperEl = document.getElementById("player-wrapper");
+
+            // DRAG (MOUSE)
+            wrapperEl.addEventListener("mousedown", (e) => {
+                if (!moveMode) return;
+
+                isDragging = true;
+                startX = e.clientX - posX;
+                startY = e.clientY - posY;
+                wrapperEl.style.cursor = "grabbing";
+            });
+
+            window.addEventListener("mouseup", () => {
+                isDragging = false;
+                if (moveMode) wrapperEl.style.cursor = "grab";
+            });
+
+            window.addEventListener("mousemove", (e) => {
+                if (!isDragging || !moveMode) return;
+
+                posX = e.clientX - startX;
+                posY = e.clientY - startY;
+                updateTransform();
+            });
+
+            // TOUCH
+            wrapperEl.addEventListener("touchstart", (e) => {
+                if (!moveMode) return;
+
+                isDragging = true;
+                const touch = e.touches[0];
+                startX = touch.clientX - posX;
+                startY = touch.clientY - posY;
+            });
+
+            window.addEventListener("touchend", () => {
+                isDragging = false;
+            });
+
+            window.addEventListener("touchmove", (e) => {
+                if (!isDragging || !moveMode) return;
+
+                const touch = e.touches[0];
+                posX = touch.clientX - startX;
+                posY = touch.clientY - startY;
+                updateTransform();
+            });
+
+            // BOTÓN VOLVER
+            document.getElementById("back-btn").addEventListener("click", () => {
+                window.location.href = "../index.html";
+            });
+        });
+
+        function updateTransform() {
+            const wrapper = document.getElementById("player-wrapper");
+            const container = document.getElementById("flash-container");
+
+            const rect = container.getBoundingClientRect();
+
+            const scaledWidth = rect.width * scale;
+            const scaledHeight = rect.height * scale;
+
+            const minX = Math.min(0, rect.width - scaledWidth);
+            const minY = Math.min(0, rect.height - scaledHeight);
+            const maxX = 0;
+            const maxY = 0;
+
+            posX = Math.max(minX, Math.min(maxX, posX));
+            posY = Math.max(minY, Math.min(maxY, posY));
+
+            wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+        }
+    </script>
+
+</body>
+</html>

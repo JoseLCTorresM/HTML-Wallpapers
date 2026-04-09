@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>F-series Select</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        .contenedor {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 40px;
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        .item {
+            overflow: hidden;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .item:hover {
+            transform: scale(1.05);
+        }
+
+        .item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="contenedor">
+
+        <!-- ITEM 1 -->
+        <a href="yoko/yoko.html" class="item">
+            <img src="yoko/yokoMain.jpg" alt="Página 1">
+        </a>
+
+        <!-- ITEM 2 -->
+        <a href="nami/nami.html" class="item">
+            <img src="nami/namiMain.jpg" alt="Página 1">
+        </a>
+
+        <!-- ITEM 3 -->
+        <a href="rio/rio.html" class="item">
+            <img src="rio/rioMain.jpg" alt="Página 1">
+        </a>
+
+
+        <!-- Agrega más copiando este bloque -->
+
+    </div>
+
+</body>
+</html>
